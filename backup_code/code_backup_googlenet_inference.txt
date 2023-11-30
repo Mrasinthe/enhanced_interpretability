@@ -1,0 +1,101 @@
+import torch.nn as nn
+import googlenet_pytorch
+import torchvision.transforms as transforms
+
+class GoogleNet(nn.Module):
+    def __init__(self):
+        super(GoogleNet,self).__init__()
+        #self.model = torch.hub.load('pytorch/vision:v0.10.0', 'googlenet', pretrained=False, progress=True)
+        self.model = googlenet_pytorch.GoogLeNet.from_pretrained('googlenet')
+        self.avgpool = nn.AdaptiveAvgPool2d((1,1))
+        self.layernorm = nn.LayerNorm(1024,elementwise_affine=True)
+        self._fc = nn.Linear(1024,2, bias=False)
+    def forward(self, x):
+        batch_size ,_,_,_ =x.shape
+        x = self.model.extract_features(x)
+        x = self.model.avgpool(x)
+        x = x.view(-1, 1024)
+        x = self.layernorm(x)
+        x = self._fc(x)
+        x = F.normalize(x, p=2, dim=1)
+        return x
+    
+test_transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(
+        mean=[0.5, 0.5, 0.5],
+        std=[0.5, 0.5, 0.5]
+    )
+])
+
+
+
+
+import torch
+from PIL import Image
+print(torch.__version__)
+torch.nn.functional as F
+
+#saved_model = torch.load('model\saved_model.pt')
+#model.load_state_dict(checkpoint['model_state_dict'])
+
+model = GoogleNet()#*args, **kwargs)
+
+
+model.load_state_dict(torch.load('model\saved_model.pt'))
+model.eval()
+
+print(type(model))
+
+input_image = Image.open('test_images\MI_2619_874.png').convert('RGB')
+print(type(input_image))
+
+input_tensor = test_transform(input_image)
+print(type(input_tensor))
+input_batch = input_tensor.unsqueeze(0)  # create a mini-batch as expected by the model
+
+print(type(input_batch))
+with torch.no_grad():
+  logits = model(input_batch)
+probabilities = torch.nn.functional.softmax(logits,dim=1)
+classes = ('mi', 'norm')
+
+print("probabilities are",classes,probabilities)
+prob_mi = probabilities[0,0]
+print("probablitiy for mi is", prob_mi)
+
+
+
+
+
+
+from lime import lime_image
+from skimage.segmentation import mark_boundaries
+import matplotlib.pyplot as plt
+
+
+explainer = lime_image.LimeImageExplainer()
+
+
+pil_image_transform = transforms.Compose([
+    transforms.Resize((224, 224))
+])
+def batch_predict(images):
+    model.eval()
+    batch = torch.stack(tuple(preprocess_transform(i) for i in images), dim=0)
+
+    device = torch.device("cpu")
+    model.to(device)
+    batch = batch.to(device)
+    
+    logits = model(batch)
+    probs = F.softmax(logits, dim=1)
+    return probs.detach().cpu().numpy()
+
+explanation = explainer.explain_instance(np.array(pil_image_transform(input_image)),
+                                        batch_predict)
+temp, mask = explanation.get_image_and_mask('mi')
+
+img_boundry1 = mark_boundaries(temp/255.0, mask)
+plt.imshow(img_boundry1)
