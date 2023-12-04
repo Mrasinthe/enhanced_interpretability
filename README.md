@@ -8,5 +8,5 @@
 ## Run the server
 
 - sudo docker build -t enhanced .
-- sudo docker run -p 4000:80 enhanced
+- sudo docker run -p 8080:8080 enhanced
 
