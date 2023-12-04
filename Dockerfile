@@ -5,19 +5,23 @@ FROM python:3.9-slim
 WORKDIR /app
 
 # Copy the current directory contents into the container at /app
-COPY . /app
-COPY model /app/model
-
-
+# COPY . /app
+# COPY model /app/model
 
 # Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# RUN pip install --no-cache-dir -r requirements.txt
+
+COPY requirements.txt requirements.txt
+RUN pip install -r requirements.txt
+
+COPY . .
+COPY model /app/model
 
 # Make port 80 available to the world outside this container
-EXPOSE 80
+EXPOSE 8080
 
 # Define environment variable
-ENV NAME World
+# ENV NAME World
 
 # Run app.py when the container launches
 CMD ["python", "main.py"]
