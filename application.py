@@ -54,7 +54,6 @@ model = GoogleNet()#*args, **kwargs)
 model_dir = '/app/model'
 # Load the model from the saved file
 model.load_state_dict(torch.load(os.path.join(model_dir, 'saved_model.pt')))
-
 # model.load_state_dict(torch.load('model\saved_model.pt'))
 model.eval()
 
